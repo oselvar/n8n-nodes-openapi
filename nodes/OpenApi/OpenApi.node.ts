@@ -121,6 +121,61 @@ export class OpenApi implements INodeType {
 				description: 'Query string parameters',
 			},
 			{
+				displayName: 'JSON Input Mode',
+				name: 'jsonInputMode',
+				type: 'options',
+				options: [
+					{
+						name: 'Use Schema Fields',
+						value: 'fields',
+						description: 'Fill in fields based on the API schema',
+					},
+					{
+						name: 'Raw JSON',
+						value: 'raw',
+						description: 'Enter raw JSON directly',
+					},
+				],
+				default: 'fields',
+				displayOptions: {
+					show: {
+						contentType: ['application/json'],
+					},
+				},
+				description: 'How to provide the JSON request body',
+			},
+			{
+				displayName: 'Request Body',
+				name: 'jsonBodyFields',
+				type: 'resourceMapper',
+				noDataExpression: true,
+				default: {
+					mappingMode: 'defineBelow',
+					value: null,
+				},
+				typeOptions: {
+					resourceMapper: {
+						resourceMapperMethod: 'getJsonBodyFields',
+						mode: 'add',
+						fieldWords: {
+							singular: 'field',
+							plural: 'fields',
+						},
+						addAllFields: true,
+						multiKeyMatch: false,
+						supportAutoMap: false,
+					},
+					loadOptionsDependsOn: ['operation'],
+				},
+				displayOptions: {
+					show: {
+						contentType: ['application/json'],
+						jsonInputMode: ['fields'],
+					},
+				},
+				description: 'JSON body fields based on the API schema',
+			},
+			{
 				displayName: 'Request Body (JSON)',
 				name: 'requestBodyJson',
 				type: 'json',
@@ -132,6 +187,7 @@ export class OpenApi implements INodeType {
 				displayOptions: {
 					show: {
 						contentType: ['application/json'],
+						jsonInputMode: ['raw'],
 					},
 				},
 			},
@@ -260,6 +316,19 @@ export class OpenApi implements INodeType {
 				}
 				return { fields: schemaToResourceMapperFields(operation.requestBody.schema, contentType) };
 			},
+			async getJsonBodyFields(this: ILoadOptionsFunctions): Promise<ResourceMapperFields> {
+				const operation = await getSelectedOperation(this);
+				if (!operation) {
+					return { fields: [], emptyFieldsNotice: 'Select an operation first' };
+				}
+				if (!operation.requestBody) {
+					return { fields: [], emptyFieldsNotice: 'This operation has no request body' };
+				}
+				if (operation.requestBody.contentType !== 'application/json') {
+					return { fields: [], emptyFieldsNotice: 'This operation does not use JSON body' };
+				}
+				return { fields: schemaToResourceMapperFields(operation.requestBody.schema) };
+			},
 		},
 	};
 
@@ -356,6 +425,15 @@ function extractBodyData(
 
 	switch (contentType) {
 		case 'application/json': {
+			const jsonInputMode = context.getNodeParameter(
+				'jsonInputMode',
+				itemIndex,
+				'fields',
+			) as string;
+			if (jsonInputMode === 'fields') {
+				const data = extractResourceMapperValues(context, 'jsonBodyFields', itemIndex);
+				return { contentType, data };
+			}
 			const jsonStr = context.getNodeParameter('requestBodyJson', itemIndex, '{}') as string;
 			const data = jsonStr && jsonStr.trim() !== '' ? JSON.parse(jsonStr) : {};
 			return { contentType, data };

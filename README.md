@@ -28,10 +28,10 @@ Each operation from the OpenAPI spec appears as a selectable option with its ope
 
 Create an **OpenAPI Credentials API** credential with the following configuration:
 
-| Field | Description |
-|-------|-------------|
-| **OpenAPI Spec URL** | URL to your API's OpenAPI specification (JSON or YAML) |
-| **Base URL Override** | Optional. Override the server URL from the spec |
+| Field                   | Description                                             |
+| ----------------------- | ------------------------------------------------------- |
+| **OpenAPI Spec URL**    | URL to your API's OpenAPI specification (JSON or YAML)  |
+| **Base URL Override**   | Optional. Override the server URL from the spec         |
 | **Authentication Type** | Choose from: None, API Key, Bearer Token, or Basic Auth |
 
 ### Authentication Types
@@ -56,12 +56,12 @@ Create an **OpenAPI Credentials API** credential with the following configuratio
 
 The node supports multiple request body formats:
 
-| Content Type | Description |
-|-------------|-------------|
-| `application/json` | JSON object editor |
-| `application/xml` | XML string editor |
-| `application/x-www-form-urlencoded` | Form field mapper |
-| `multipart/form-data` | Form fields with file upload support |
+| Content Type                        | Description                          |
+| ----------------------------------- | ------------------------------------ |
+| `application/json`                  | JSON object editor                   |
+| `application/xml`                   | XML string editor                    |
+| `application/x-www-form-urlencoded` | Form field mapper                    |
+| `multipart/form-data`               | Form fields with file upload support |
 
 ### File Uploads
 
@@ -76,21 +76,25 @@ For `multipart/form-data` requests with file uploads:
 Using the classic [Petstore API](https://petstore3.swagger.io/):
 
 **Credential Configuration:**
+
 - OpenAPI Spec URL: `https://petstore3.swagger.io/api/v3/openapi.json`
 - Authentication Type: API Key
 - API Key Header Name: `api_key`
 - API Key: `special-key`
 
 **List Pets:**
+
 - Operation: `findPetsByStatus`
 - Query Parameters: `status = available`
 
 **Create Pet:**
+
 - Operation: `addPet`
 - Content Type: `application/json`
 - Body: `{ "name": "Fluffy", "status": "available" }`
 
 **Get Pet by ID:**
+
 - Operation: `getPetById`
 - Path Parameters: `petId = 123`
 
