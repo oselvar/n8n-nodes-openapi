@@ -1,247 +1,110 @@
-![Banner image](https://user-images.githubusercontent.com/10284570/173569848-c624317f-42b1-45a6-ab09-f0ea3c247648.png)
+# n8n-nodes-openapi
 
-# n8n-nodes-starter
+This is an n8n community node that lets you integrate with **any REST API** that has an OpenAPI specification (OpenAPI 3.0 or 3.1).
 
-This starter repository helps you build custom integrations for [n8n](https://n8n.io). It includes example nodes, credentials, the node linter, and all the tooling you need to get started.
+Instead of building custom nodes for each API, this universal node dynamically generates the UI and executes operations from any OpenAPI spec.
 
-## Quick Start
+[n8n](https://n8n.io/) is a [fair-code licensed](https://docs.n8n.io/reference/license/) workflow automation platform.
 
-> [!TIP]
-> **New to building n8n nodes?** The fastest way to get started is with `npm create @n8n/node`. This command scaffolds a complete node package for you using the [@n8n/node-cli](https://www.npmjs.com/package/@n8n/node-cli).
+## Installation
 
-**To create a new node package from scratch:**
+Follow the [installation guide](https://docs.n8n.io/integrations/community-nodes/installation/) in the n8n community nodes documentation.
 
-```bash
-npm create @n8n/node
-```
+The package name is: `@oselvar/n8n-nodes-openapi`
 
-**Already using this starter? Start developing with:**
+## Operations
 
-```bash
-npm run dev
-```
+The OpenAPI node dynamically loads all operations from your API specification:
 
-This starts n8n with your nodes loaded and hot reload enabled.
+- **GET** - Retrieve resources
+- **POST** - Create resources
+- **PUT** - Update resources (full replacement)
+- **PATCH** - Update resources (partial)
+- **DELETE** - Remove resources
 
-## What's Included
+Each operation from the OpenAPI spec appears as a selectable option with its operation ID, HTTP method, and path.
 
-This starter repository includes two example nodes to learn from:
+## Credentials
 
-- **[Example Node](nodes/Example/)** - A simple starter node that shows the basic structure with a custom `execute` method
-- **[GitHub Issues Node](nodes/GithubIssues/)** - A complete, production-ready example built using the **declarative style**:
-  - **Low-code approach** - Define operations declaratively without writing request logic
-  - Multiple resources (Issues, Comments)
-  - Multiple operations (Get, Get All, Create)
-  - Two authentication methods (OAuth2 and Personal Access Token)
-  - List search functionality for dynamic dropdowns
-  - Proper error handling and typing
-  - Ideal for HTTP API-based integrations
+Create an **OpenAPI Credentials API** credential with the following configuration:
 
-> [!TIP]
-> The declarative/low-code style (used in GitHub Issues) is the recommended approach for building nodes that interact with HTTP APIs. It significantly reduces boilerplate code and handles requests automatically.
+| Field | Description |
+|-------|-------------|
+| **OpenAPI Spec URL** | URL to your API's OpenAPI specification (JSON or YAML) |
+| **Base URL Override** | Optional. Override the server URL from the spec |
+| **Authentication Type** | Choose from: None, API Key, Bearer Token, or Basic Auth |
 
-Browse these examples to understand both approaches, then modify them or create your own.
+### Authentication Types
 
-## Finding Inspiration
+- **None** - For public APIs without authentication
+- **API Key** - Sends key as a header (default: `X-API-Key`) or query parameter
+- **Bearer Token** - Standard OAuth2/JWT token in Authorization header
+- **Basic Auth** - Username and password with Base64 encoding
 
-Looking for more examples? Check out these resources:
+## Usage
 
-- **[npm Community Nodes](https://www.npmjs.com/search?q=keywords:n8n-community-node-package)** - Browse thousands of community-built nodes on npm using the `n8n-community-node-package` tag
-- **[n8n Built-in Nodes](https://github.com/n8n-io/n8n/tree/master/packages/nodes-base/nodes)** - Study the source code of n8n's official nodes for production-ready patterns and best practices
-- **[n8n Credentials](https://github.com/n8n-io/n8n/tree/master/packages/nodes-base/credentials)** - See how authentication is implemented for various services
+1. Add the **OpenAPI** node to your workflow
+2. Select your configured credential
+3. Choose an operation from the dropdown (populated from your API spec)
+4. Configure parameters:
+   - **Path Parameters** - Values substituted into the URL (e.g., `/pets/{petId}`)
+   - **Query Parameters** - Optional filters and pagination
+   - **Request Body** - JSON, XML, or form data depending on content type
+5. Execute the node
 
-These are excellent resources to understand how to structure your nodes, handle different API patterns, and implement advanced features.
+### Content Types
 
-## Prerequisites
+The node supports multiple request body formats:
 
-Before you begin, install the following on your development machine:
+| Content Type | Description |
+|-------------|-------------|
+| `application/json` | JSON object editor |
+| `application/xml` | XML string editor |
+| `application/x-www-form-urlencoded` | Form field mapper |
+| `multipart/form-data` | Form fields with file upload support |
 
-### Required
+### File Uploads
 
-- **[Node.js](https://nodejs.org/)** (v22 or higher) and npm
-  - Linux/Mac/WSL: Install via [nvm](https://github.com/nvm-sh/nvm)
-  - Windows: Follow [Microsoft's NodeJS guide](https://learn.microsoft.com/en-us/windows/dev-environment/javascript/nodejs-on-windows)
-- **[git](https://git-scm.com/downloads)**
+For `multipart/form-data` requests with file uploads:
 
-### Recommended
+1. Use a previous node to load binary data (e.g., Read Binary File)
+2. Set the **Binary Property Name** field to the property containing your file
+3. The file will be included in the form data upload
 
-- Follow n8n's [development environment setup guide](https://docs.n8n.io/integrations/creating-nodes/build/node-development-environment/)
+## Example: Petstore API
 
-> [!NOTE]
-> The `@n8n/node-cli` is included as a dev dependency and will be installed automatically when you run `npm install`. The CLI includes n8n for local development, so you don't need to install n8n globally.
+Using the classic [Petstore API](https://petstore3.swagger.io/):
 
-## Getting Started with this Starter
+**Credential Configuration:**
+- OpenAPI Spec URL: `https://petstore3.swagger.io/api/v3/openapi.json`
+- Authentication Type: API Key
+- API Key Header Name: `api_key`
+- API Key: `special-key`
 
-Follow these steps to create your own n8n community node package:
+**List Pets:**
+- Operation: `findPetsByStatus`
+- Query Parameters: `status = available`
 
-### 1. Create Your Repository
+**Create Pet:**
+- Operation: `addPet`
+- Content Type: `application/json`
+- Body: `{ "name": "Fluffy", "status": "available" }`
 
-[Generate a new repository](https://github.com/n8n-io/n8n-nodes-starter/generate) from this template, then clone it:
+**Get Pet by ID:**
+- Operation: `getPetById`
+- Path Parameters: `petId = 123`
 
-```bash
-git clone https://github.com/<your-organization>/<your-repo-name>.git
-cd <your-repo-name>
-```
+## Compatibility
 
-### 2. Install Dependencies
-
-```bash
-npm install
-```
-
-This installs all required dependencies including the `@n8n/node-cli`.
-
-### 3. Explore the Examples
-
-Browse the example nodes in [nodes/](nodes/) and [credentials/](credentials/) to understand the structure:
-
-- Start with [nodes/Example/](nodes/Example/) for a basic node
-- Study [nodes/GithubIssues/](nodes/GithubIssues/) for a real-world implementation
-
-### 4. Build Your Node
-
-Edit the example nodes to fit your use case, or create new node files by copying the structure from [nodes/Example/](nodes/Example/).
-
-> [!TIP]
-> If you want to scaffold a completely new node package, use `npm create @n8n/node` to start fresh with the CLI's interactive generator.
-
-### 5. Configure Your Package
-
-Update `package.json` with your details:
-
-- `name` - Your package name (must start with `n8n-nodes-`)
-- `author` - Your name and email
-- `repository` - Your repository URL
-- `description` - What your node does
-
-Make sure your node is registered in the `n8n.nodes` array.
-
-### 6. Develop and Test Locally
-
-Start n8n with your node loaded:
-
-```bash
-npm run dev
-```
-
-This command runs `n8n-node dev` which:
-
-- Builds your node with watch mode
-- Starts n8n with your node available
-- Automatically rebuilds when you make changes
-- Opens n8n in your browser (usually http://localhost:5678)
-
-You can now test your node in n8n workflows!
-
-> [!NOTE]
-> Learn more about CLI commands in the [@n8n/node-cli documentation](https://www.npmjs.com/package/@n8n/node-cli).
-
-### 7. Lint Your Code
-
-Check for errors:
-
-```bash
-npm run lint
-```
-
-Auto-fix issues when possible:
-
-```bash
-npm run lint:fix
-```
-
-### 8. Build for Production
-
-When ready to publish:
-
-```bash
-npm run build
-```
-
-This compiles your TypeScript code to the `dist/` folder.
-
-### 9. Prepare for Publishing
-
-Before publishing:
-
-1. **Update documentation**: Replace this README with your node's documentation. Use [README_TEMPLATE.md](README_TEMPLATE.md) as a starting point.
-2. **Update the LICENSE**: Add your details to the [LICENSE](LICENSE.md) file.
-3. **Test thoroughly**: Ensure your node works in different scenarios.
-
-### 10. Publish to npm
-
-Publish your package to make it available to the n8n community:
-
-```bash
-npm publish
-```
-
-Learn more about [publishing to npm](https://docs.npmjs.com/packages-and-modules/contributing-packages-to-the-registry).
-
-### 11. Submit for Verification (Optional)
-
-Get your node verified for n8n Cloud:
-
-1. Ensure your node meets the [requirements](https://docs.n8n.io/integrations/creating-nodes/deploy/submit-community-nodes/):
-   - Uses MIT license ✅ (included in this starter)
-   - No external package dependencies
-   - Follows n8n's design guidelines
-   - Passes quality and security review
-
-2. Submit through the [n8n Creator Portal](https://creators.n8n.io/nodes)
-
-**Benefits of verification:**
-
-- Available directly in n8n Cloud
-- Discoverable in the n8n nodes panel
-- Verified badge for quality assurance
-- Increased visibility in the n8n community
-
-## Available Scripts
-
-This starter includes several npm scripts to streamline development:
-
-| Script                | Description                                                                 |
-| --------------------- | --------------------------------------------------------------------------- |
-| `npm run dev`         | Start n8n with your node and watch for changes (runs `n8n-node dev`)        |
-| `npm run build`       | Compile TypeScript to JavaScript for production (runs `n8n-node build`)     |
-| `npm run build:watch` | Build in watch mode (auto-rebuild on changes)                               |
-| `npm run lint`        | Check your code for errors and style issues (runs `n8n-node lint`)          |
-| `npm run lint:fix`    | Automatically fix linting issues when possible (runs `n8n-node lint --fix`) |
-| `npm run release`     | Create a new release (runs `n8n-node release`)                              |
-
-> [!TIP]
-> These scripts use the [@n8n/node-cli](https://www.npmjs.com/package/@n8n/node-cli) under the hood. You can also run CLI commands directly, e.g., `npx n8n-node dev`.
-
-## Troubleshooting
-
-### My node doesn't appear in n8n
-
-1. Make sure you ran `npm install` to install dependencies
-2. Check that your node is listed in `package.json` under `n8n.nodes`
-3. Restart the dev server with `npm run dev`
-4. Check the console for any error messages
-
-### Linting errors
-
-Run `npm run lint:fix` to automatically fix most common issues. For remaining errors, check the [n8n node development guidelines](https://docs.n8n.io/integrations/creating-nodes/).
-
-### TypeScript errors
-
-Make sure you're using Node.js v22 or higher and have run `npm install` to get all type definitions.
+- **n8n version**: 1.0.0 or later
+- **OpenAPI versions**: 3.0.x and 3.1.x
 
 ## Resources
 
-- **[n8n Node Documentation](https://docs.n8n.io/integrations/creating-nodes/)** - Complete guide to building nodes
-- **[n8n Community Forum](https://community.n8n.io/)** - Get help and share your nodes
-- **[@n8n/node-cli Documentation](https://www.npmjs.com/package/@n8n/node-cli)** - CLI tool reference
-- **[n8n Creator Portal](https://creators.n8n.io/nodes)** - Submit your node for verification
-- **[Submit Community Nodes Guide](https://docs.n8n.io/integrations/creating-nodes/deploy/submit-community-nodes/)** - Verification requirements and process
-
-## Contributing
-
-Have suggestions for improving this starter? [Open an issue](https://github.com/n8n-io/n8n-nodes-starter/issues) or submit a pull request!
+- [n8n community nodes documentation](https://docs.n8n.io/integrations/community-nodes/)
+- [OpenAPI Specification](https://www.openapis.org/)
+- [GitHub repository](https://github.com/oselvar/n8n-nodes-openapi)
 
 ## License
 
-[MIT](https://github.com/n8n-io/n8n-nodes-starter/blob/master/LICENSE.md)
+[MIT](LICENSE.md)
