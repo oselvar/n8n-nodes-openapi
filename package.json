@@ -1,19 +1,19 @@
 {
-	"name": "n8n-nodes-<...>",
+	"name": "@oselvar/n8n-nodes-openapi",
 	"version": "0.1.0",
-	"description": "",
+	"description": "n8n nodes generated from OpenAPI specifications",
 	"license": "MIT",
 	"homepage": "",
 	"keywords": [
 		"n8n-community-node-package"
 	],
 	"author": {
-		"name": "",
-		"email": ""
+		"name": "Aslak Hellesøy",
+		"email": "aslak.hellesoy@gmail.com"
 	},
 	"repository": {
 		"type": "git",
-		"url": "https://github.com/<...>/n8n-nodes-<...>.git"
+		"url": "https://github.com/oselvar/n8n-nodes-openapi.git"
 	},
 	"scripts": {
 		"build": "n8n-node build",
