@@ -14,7 +14,7 @@ import { NodeConnectionTypes, NodeOperationError } from 'n8n-workflow'
 import { parseOpenApiSpec } from './lib/parseOpenApiSpec'
 import { extractOperations } from './lib/extractOperations'
 import { buildRequestOptions } from './lib/buildRequestOptions'
-import type { OpenApiDocument, OpenApiSchema } from './lib/types'
+import type { OpenApiDocument, OpenApiSchema, ParsedParameter } from './lib/types'
 
 type FetchContext = ILoadOptionsFunctions | IExecuteFunctions
 
@@ -55,68 +55,52 @@ export class OpenApi implements INodeType {
 			{
 				displayName: 'Path Parameters',
 				name: 'pathParameters',
-				type: 'fixedCollection',
-				typeOptions: {
-					multipleValues: true,
+				type: 'resourceMapper',
+				noDataExpression: true,
+				default: {
+					mappingMode: 'defineBelow',
+					value: null,
 				},
-				default: {},
-				placeholder: 'Add Path Parameter',
-				options: [
-					{
-						displayName: 'Parameter',
-						name: 'parameter',
-						values: [
-							{
-								displayName: 'Name',
-								name: 'name',
-								type: 'string',
-								default: '',
-								description: 'Name of the path parameter',
-							},
-							{
-								displayName: 'Value',
-								name: 'value',
-								type: 'string',
-								default: '',
-								description: 'Value of the path parameter',
-							},
-						],
+				typeOptions: {
+					resourceMapper: {
+						resourceMapperMethod: 'getPathParameters',
+						mode: 'add',
+						fieldWords: {
+							singular: 'parameter',
+							plural: 'parameters',
+						},
+						addAllFields: true,
+						multiKeyMatch: false,
+						supportAutoMap: false,
 					},
-				],
-				description: 'Path parameters to include in the URL (e.g., /users/{ID})',
+					loadOptionsDependsOn: ['operation'],
+				},
+				description: 'Path parameters for the URL template',
 			},
 			{
 				displayName: 'Query Parameters',
 				name: 'queryParameters',
-				type: 'fixedCollection',
-				typeOptions: {
-					multipleValues: true,
+				type: 'resourceMapper',
+				noDataExpression: true,
+				default: {
+					mappingMode: 'defineBelow',
+					value: null,
 				},
-				default: {},
-				placeholder: 'Add Query Parameter',
-				options: [
-					{
-						displayName: 'Parameter',
-						name: 'parameter',
-						values: [
-							{
-								displayName: 'Name',
-								name: 'name',
-								type: 'string',
-								default: '',
-								description: 'Name of the query parameter',
-							},
-							{
-								displayName: 'Value',
-								name: 'value',
-								type: 'string',
-								default: '',
-								description: 'Value of the query parameter',
-							},
-						],
+				typeOptions: {
+					resourceMapper: {
+						resourceMapperMethod: 'getQueryParameters',
+						mode: 'add',
+						fieldWords: {
+							singular: 'parameter',
+							plural: 'parameters',
+						},
+						addAllFields: true,
+						multiKeyMatch: false,
+						supportAutoMap: false,
 					},
-				],
-				description: 'Query parameters to append to the URL',
+					loadOptionsDependsOn: ['operation'],
+				},
+				description: 'Query string parameters',
 			},
 			{
 				displayName: 'Request Body',
@@ -137,10 +121,11 @@ export class OpenApi implements INodeType {
 						},
 						addAllFields: true,
 						multiKeyMatch: false,
+						supportAutoMap: false,
 					},
 					loadOptionsDependsOn: ['operation'],
 				},
-				description: 'The request body fields for POST/PUT/PATCH operations',
+				description: 'Request body fields',
 			},
 		],
 	}
@@ -163,26 +148,37 @@ export class OpenApi implements INodeType {
 			},
 		},
 		resourceMapping: {
+			async getPathParameters(this: ILoadOptionsFunctions): Promise<ResourceMapperFields> {
+				const operation = await getSelectedOperation(this)
+				if (!operation) {
+					return { fields: [], emptyFieldsNotice: 'Select an operation first' }
+				}
+				const pathParams = operation.parameters.filter((p) => p.in === 'path')
+				if (pathParams.length === 0) {
+					return { fields: [], emptyFieldsNotice: 'This operation has no path parameters' }
+				}
+				return { fields: parametersToResourceMapperFields(pathParams) }
+			},
+			async getQueryParameters(this: ILoadOptionsFunctions): Promise<ResourceMapperFields> {
+				const operation = await getSelectedOperation(this)
+				if (!operation) {
+					return { fields: [], emptyFieldsNotice: 'Select an operation first' }
+				}
+				const queryParams = operation.parameters.filter((p) => p.in === 'query')
+				if (queryParams.length === 0) {
+					return { fields: [], emptyFieldsNotice: 'This operation has no query parameters' }
+				}
+				return { fields: parametersToResourceMapperFields(queryParams) }
+			},
 			async getBodyFields(this: ILoadOptionsFunctions): Promise<ResourceMapperFields> {
-				const credentials = await this.getCredentials('openApiCredentialsApi')
-				const specUrl = credentials.specUrl as string
-				const operationId = this.getNodeParameter('operation', 0) as string
-
-				if (!operationId) {
-					return { fields: [] }
+				const operation = await getSelectedOperation(this)
+				if (!operation) {
+					return { fields: [], emptyFieldsNotice: 'Select an operation first' }
 				}
-
-				const specContent = await fetchSpec(this, specUrl)
-				const spec = await parseOpenApiSpec(specContent)
-				const operations = extractOperations(spec)
-				const operation = operations.find((op) => op.operationId === operationId)
-
-				if (!operation || !operation.requestBodySchema) {
-					return { fields: [] }
+				if (!operation.requestBodySchema) {
+					return { fields: [], emptyFieldsNotice: 'This operation has no request body' }
 				}
-
-				const fields = schemaToResourceMapperFields(operation.requestBodySchema)
-				return { fields }
+				return { fields: schemaToResourceMapperFields(operation.requestBodySchema) }
 			},
 		},
 	}
@@ -212,17 +208,15 @@ export class OpenApi implements INodeType {
 		const baseUrl = baseUrlOverride || getBaseUrl(spec)
 
 		for (let i = 0; i < items.length; i++) {
-			const pathParams = collectFixedCollectionParameters(this, 'pathParameters', i)
-			const queryParams = collectFixedCollectionParameters(this, 'queryParameters', i)
-			const requestBody = extractRequestBody(this, i)
-
-			const allParams = { ...pathParams, ...queryParams }
+			const pathParams = extractResourceMapperValues(this, 'pathParameters', i)
+			const queryParams = extractResourceMapperValues(this, 'queryParameters', i)
+			const bodyParams = extractResourceMapperValues(this, 'requestBody', i)
 
 			const requestOptions = buildRequestOptions(
 				operation,
 				baseUrl,
-				allParams,
-				requestBody,
+				{ ...pathParams, ...queryParams },
+				bodyParams,
 				credentials as Record<string, unknown>,
 			)
 
@@ -255,39 +249,17 @@ function getBaseUrl(spec: OpenApiDocument): string {
 	return ''
 }
 
-type FixedCollectionParameter = {
-	parameter?: ReadonlyArray<{ name: string; value: string }>
-}
-
-function collectFixedCollectionParameters(
+function extractResourceMapperValues(
 	context: IExecuteFunctions,
 	paramName: string,
 	itemIndex: number,
 ): Record<string, unknown> {
-	const params: Record<string, unknown> = {}
-	const collection = context.getNodeParameter(paramName, itemIndex, {}) as FixedCollectionParameter
-
-	if (collection.parameter) {
-		for (const param of collection.parameter) {
-			if (param.name && param.value !== undefined && param.value !== '') {
-				params[param.name] = param.value
-			}
-		}
-	}
-
-	return params
-}
-
-function extractRequestBody(
-	context: IExecuteFunctions,
-	itemIndex: number,
-): Record<string, unknown> {
-	const requestBodyValue = context.getNodeParameter(
-		'requestBody.value',
+	const value = context.getNodeParameter(
+		`${paramName}.value`,
 		itemIndex,
 		{},
 	) as Record<string, unknown> | null
-	return requestBodyValue ?? {}
+	return value ?? {}
 }
 
 function schemaToResourceMapperFields(schema: OpenApiSchema): ResourceMapperField[] {
@@ -337,4 +309,34 @@ function toDisplayName(name: string): string {
 	return name
 		.replace(/([a-z])([A-Z])/g, '$1 $2')
 		.replace(/^./, (c) => c.toUpperCase())
+}
+
+async function getSelectedOperation(context: ILoadOptionsFunctions) {
+	const credentials = await context.getCredentials('openApiCredentialsApi')
+	const specUrl = credentials.specUrl as string
+	const operationId = context.getNodeParameter('operation', 0) as string
+
+	if (!operationId) {
+		return undefined
+	}
+
+	const specContent = await fetchSpec(context, specUrl)
+	const spec = await parseOpenApiSpec(specContent)
+	const operations = extractOperations(spec)
+	return operations.find((op) => op.operationId === operationId)
+}
+
+function parametersToResourceMapperFields(
+	parameters: readonly ParsedParameter[],
+): ResourceMapperField[] {
+	return parameters.map((param) => ({
+		id: param.name,
+		displayName: toDisplayName(param.name),
+		required: param.required,
+		defaultMatch: false,
+		canBeUsedToMatch: false,
+		display: true,
+		type: mapSchemaTypeToFieldType(param.schema),
+		options: param.schema.enum?.map((value) => ({ name: String(value), value })),
+	}))
 }
