@@ -1,1 +1,725 @@
-{"openapi":"3.1.0","info":{"version":"0.1.0","title":"Papyria API"},"components":{"schemas":{},"parameters":{}},"paths":{"/workflows/{org}/{workflow}":{"get":{"operationId":"getWorkflow","description":"Get a workflow by path (returns the latest version)","parameters":[{"schema":{"type":"string","description":"The organization name"},"required":true,"description":"The organization name","name":"org","in":"path"},{"schema":{"type":"string","description":"The workflow name"},"required":true,"description":"The workflow name","name":"workflow","in":"path"}],"responses":{"200":{"description":"A workflow","content":{"application/json":{"schema":{"type":"object","properties":{"name":{"type":"string"},"description":{"type":"string"},"workflowPath":{"type":"string","pattern":"^[a-zA-Z0-9_-]+\\/[a-zA-Z0-9_-]+\\/v\\d{5}\\/workflow\\.json$"},"inputs":{"type":"array","items":{"type":"string"}},"outputs":{"type":"array","items":{"type":"string"}}},"required":["name","workflowPath","inputs","outputs"]}}}},"404":{"description":"Workflow not found","content":{"application/json":{"schema":{"type":"object","properties":{"error":{"type":"string"}},"required":["error"]}}}}}},"post":{"operationId":"createWorkflow","description":"Publish a new version of a workflow.\n\nThe workflow path is provided in the URL path in the format: organization/project.\nA new version will be created automatically.","parameters":[{"schema":{"type":"string","description":"The organization name"},"required":true,"description":"The organization name","name":"org","in":"path"},{"schema":{"type":"string","description":"The workflow name"},"required":true,"description":"The workflow name","name":"workflow","in":"path"}],"requestBody":{"content":{"multipart/form-data":{"schema":{"type":"object","properties":{"workflow":{"type":"string","format":"binary"}},"required":["workflow"],"additionalProperties":{"type":"string","format":"binary"}}}}},"responses":{"200":{"description":"Workflow published successfully","content":{"application/json":{"schema":{"type":"object","properties":{"version":{"type":"string","description":"The version that was created"}},"required":["version"]}}}},"400":{"description":"Bad request","content":{"application/json":{"schema":{"type":"object","properties":{"error":{"type":"string"}},"required":["error"]}}}}}}},"/workflows":{"get":{"operationId":"listWorkflows","description":"List all workflows","responses":{"200":{"description":"List of workflows","content":{"application/json":{"schema":{"type":"array","items":{"type":"object","properties":{"name":{"type":"string"},"description":{"type":"string"},"workflowPath":{"type":"string","pattern":"^[a-zA-Z0-9_-]+\\/[a-zA-Z0-9_-]+\\/v\\d{5}\\/workflow\\.json$"},"inputs":{"type":"array","items":{"type":"string"}},"outputs":{"type":"array","items":{"type":"string"}}},"required":["name","workflowPath","inputs","outputs"]}}}}}}}},"/runs/{org}/{workflow}":{"post":{"operationId":"startWorkflow","description":"Start a workflow.\n\nThe workflow to start is specified in the URL path in the format: organization/project.\n\nAny number of files can be provided as input files.\nThese files will be available to the workflow as input files.\nWhat files to provide depends on the workflow.\n\nThe workflow will be executed asynchronously.\nThe workflow execution ID is returned in the response.\nThe workflow execution ID can be used to get events and download files.","parameters":[{"schema":{"type":"string","description":"The organization name"},"required":true,"description":"The organization name","name":"org","in":"path"},{"schema":{"type":"string","description":"The workflow name"},"required":true,"description":"The workflow name","name":"workflow","in":"path"}],"requestBody":{"content":{"multipart/form-data":{"schema":{"type":"object","additionalProperties":{"anyOf":[{"type":"string"},{"type":"string","format":"binary"}]}}}}},"responses":{"200":{"description":"Start a workflow","content":{"application/json":{"schema":{"type":"object","properties":{"runId":{"type":"string","description":"The id of the workflow execution"},"version":{"type":"string","description":"The version of the workflow that was used (e.g. v00001)"}},"required":["runId","version"]}}}},"400":{"description":"Bad request","content":{"application/json":{"schema":{"type":"object","properties":{"error":{"type":"string"}},"required":["error"]}}}}}}},"/runs/{org}/{workflow}/{version}/{runId}/files":{"get":{"operationId":"downloadFile","description":"Download a file from a workflow run.\n\nAny file produced by the workflow is available for download at this endpoint.","parameters":[{"schema":{"type":"string","description":"The organization name"},"required":true,"description":"The organization name","name":"org","in":"path"},{"schema":{"type":"string","description":"The workflow name"},"required":true,"description":"The workflow name","name":"workflow","in":"path"},{"schema":{"type":"string","description":"The workflow version (e.g. v00001)"},"required":true,"description":"The workflow version (e.g. v00001)","name":"version","in":"path"},{"schema":{"type":"string","description":"The execution ID"},"required":true,"description":"The execution ID","name":"runId","in":"path"},{"schema":{"type":"string","description":"The file name"},"required":false,"description":"The file name","name":"fileName","in":"query"}],"responses":{"200":{"description":"Download file from workflow run (content type varies based on file)","content":{"*/*":{"schema":{"description":"File content (text or binary depending on file type)"}}}},"404":{"description":"File not found","content":{"application/json":{"schema":{"type":"object","properties":{"error":{"type":"string"}},"required":["error"]}}}}}},"put":{"operationId":"writeFile","description":"Write a file to a workflow run.\n\nThis endpoint allows writing or updating a file in a workflow run.\nUsed for HITL (Human-in-the-Loop) tasks where users can modify files\nbefore the workflow continues.","parameters":[{"schema":{"type":"string","description":"The organization name"},"required":true,"description":"The organization name","name":"org","in":"path"},{"schema":{"type":"string","description":"The workflow name"},"required":true,"description":"The workflow name","name":"workflow","in":"path"},{"schema":{"type":"string","description":"The workflow version (e.g. v00001)"},"required":true,"description":"The workflow version (e.g. v00001)","name":"version","in":"path"},{"schema":{"type":"string","description":"The execution ID"},"required":true,"description":"The execution ID","name":"runId","in":"path"},{"schema":{"type":"string","description":"The file name to write"},"required":true,"description":"The file name to write","name":"fileName","in":"query"}],"requestBody":{"content":{"application/json":{"schema":{"description":"The file content as JSON"}}}},"responses":{"200":{"description":"File written successfully","content":{"application/json":{"schema":{"type":"object","properties":{"success":{"type":"boolean","description":"Whether the file was written successfully"}},"required":["success"]}}}},"400":{"description":"Bad request","content":{"application/json":{"schema":{"type":"object","properties":{"error":{"type":"string"}},"required":["error"]}}}}}}},"/events/{runId}":{"post":{"operationId":"dispatchEvent","description":"Dispatch a task event.\n\nThis endpoint is used by distributed workers to dispatch events\nabout workflow task execution. It is *not* meant to be called by\nthe user.","parameters":[{"schema":{"type":"string","description":"The run ID"},"required":true,"description":"The run ID","name":"runId","in":"path"}],"requestBody":{"content":{"application/json":{"schema":{"type":"object","properties":{"type":{"type":"string","enum":["started","completed","failed"]},"step":{"type":"string"},"taskId":{"type":"string"},"timestamp":{"type":"string"},"error":{"type":"string"}},"required":["type","step","taskId","timestamp"]}}}},"responses":{"200":{"description":"Event dispatched","content":{"application/json":{"schema":{"type":"object","properties":{"success":{"type":"boolean","description":"Whether the event was dispatched"}},"required":["success"]}}}},"404":{"description":"Run not found","content":{"application/json":{"schema":{"type":"object","properties":{"error":{"type":"string"}},"required":["error"]}}}}}}},"/runs/{runId}/hitl/{taskId}/resume":{"post":{"operationId":"resumeHitl","description":"Resume a HITL (Human-in-the-Loop) task.\n\nThis endpoint is called after a user has reviewed and approved\na HITL task in the webapp. It signals the workflow engine to\ncontinue execution.","parameters":[{"schema":{"type":"string","description":"The run ID"},"required":true,"description":"The run ID","name":"runId","in":"path"},{"schema":{"type":"string","description":"The task ID"},"required":true,"description":"The task ID","name":"taskId","in":"path"}],"responses":{"200":{"description":"HITL task resumed","content":{"application/json":{"schema":{"type":"object","properties":{"success":{"type":"boolean","description":"Whether the HITL task was resumed"}},"required":["success"]}}}}}}},"/debug/webhook":{"post":{"operationId":"debugWebhook","description":"Debug webhook endpoint for testing HITL notifications.\n\nThis endpoint prints the webhook payload to the console with a colorful banner.\nUse this for local development and debugging of HITL webhooks.","requestBody":{"content":{"application/json":{"schema":{"type":"object","properties":{"from":{"type":"string","format":"email"},"to":{"type":"string","format":"email"},"subject":{"type":"string"},"textBody":{"type":"string"},"htmlBody":{"type":"string"}},"required":["from","to","subject","textBody","htmlBody"]}}}},"responses":{"200":{"description":"Webhook received","content":{"application/json":{"schema":{"type":"object","properties":{"received":{"type":"boolean"}},"required":["received"]}}}}}}},"/email/render":{"post":{"operationId":"renderEmail","description":"Renders markdown content to HTML and plain text for email delivery.","requestBody":{"content":{"application/json":{"schema":{"type":"object","properties":{"markdownBody":{"type":"string","description":"The markdown content to render"},"preview":{"type":"string","description":"Preview text shown in email clients"}},"required":["markdownBody","preview"]}}}},"responses":{"200":{"description":"Rendered email content","content":{"application/json":{"schema":{"type":"object","properties":{"textBody":{"type":"string","description":"Plain text version of the email"},"htmlBody":{"type":"string","description":"HTML version of the email"}},"required":["textBody","htmlBody"]}}}}}}}},"webhooks":{}}
+{
+	"openapi": "3.1.0",
+	"info": {
+		"version": "0.1.0",
+		"title": "Papyria API"
+	},
+	"components": {
+		"schemas": {},
+		"parameters": {}
+	},
+	"paths": {
+		"/workflows/{org}/{workflow}": {
+			"get": {
+				"operationId": "getWorkflow",
+				"description": "Get a workflow by path (returns the latest version)",
+				"parameters": [
+					{
+						"schema": {
+							"type": "string",
+							"description": "The organization name"
+						},
+						"required": true,
+						"description": "The organization name",
+						"name": "org",
+						"in": "path"
+					},
+					{
+						"schema": {
+							"type": "string",
+							"description": "The workflow name"
+						},
+						"required": true,
+						"description": "The workflow name",
+						"name": "workflow",
+						"in": "path"
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "A workflow",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"name": {
+											"type": "string"
+										},
+										"description": {
+											"type": "string"
+										},
+										"workflowPath": {
+											"type": "string",
+											"pattern": "^[a-zA-Z0-9_-]+\\/[a-zA-Z0-9_-]+\\/v\\d{5}\\/workflow\\.json$"
+										},
+										"inputs": {
+											"type": "array",
+											"items": {
+												"type": "string"
+											}
+										},
+										"outputs": {
+											"type": "array",
+											"items": {
+												"type": "string"
+											}
+										}
+									},
+									"required": ["name", "workflowPath", "inputs", "outputs"]
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "Workflow not found",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"error": {
+											"type": "string"
+										}
+									},
+									"required": ["error"]
+								}
+							}
+						}
+					}
+				}
+			},
+			"post": {
+				"operationId": "createWorkflow",
+				"description": "Publish a new version of a workflow.\n\nThe workflow path is provided in the URL path in the format: organization/project.\nA new version will be created automatically.",
+				"parameters": [
+					{
+						"schema": {
+							"type": "string",
+							"description": "The organization name"
+						},
+						"required": true,
+						"description": "The organization name",
+						"name": "org",
+						"in": "path"
+					},
+					{
+						"schema": {
+							"type": "string",
+							"description": "The workflow name"
+						},
+						"required": true,
+						"description": "The workflow name",
+						"name": "workflow",
+						"in": "path"
+					}
+				],
+				"requestBody": {
+					"content": {
+						"multipart/form-data": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"workflow": {
+										"type": "string",
+										"format": "binary"
+									}
+								},
+								"required": ["workflow"],
+								"additionalProperties": {
+									"type": "string",
+									"format": "binary"
+								}
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "Workflow published successfully",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"version": {
+											"type": "string",
+											"description": "The version that was created"
+										}
+									},
+									"required": ["version"]
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "Bad request",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"error": {
+											"type": "string"
+										}
+									},
+									"required": ["error"]
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/workflows": {
+			"get": {
+				"operationId": "listWorkflows",
+				"description": "List all workflows",
+				"responses": {
+					"200": {
+						"description": "List of workflows",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "array",
+									"items": {
+										"type": "object",
+										"properties": {
+											"name": {
+												"type": "string"
+											},
+											"description": {
+												"type": "string"
+											},
+											"workflowPath": {
+												"type": "string",
+												"pattern": "^[a-zA-Z0-9_-]+\\/[a-zA-Z0-9_-]+\\/v\\d{5}\\/workflow\\.json$"
+											},
+											"inputs": {
+												"type": "array",
+												"items": {
+													"type": "string"
+												}
+											},
+											"outputs": {
+												"type": "array",
+												"items": {
+													"type": "string"
+												}
+											}
+										},
+										"required": ["name", "workflowPath", "inputs", "outputs"]
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/runs/{org}/{workflow}": {
+			"post": {
+				"operationId": "startWorkflow",
+				"description": "Start a workflow.\n\nThe workflow to start is specified in the URL path in the format: organization/project.\n\nAny number of files can be provided as input files.\nThese files will be available to the workflow as input files.\nWhat files to provide depends on the workflow.\n\nThe workflow will be executed asynchronously.\nThe workflow execution ID is returned in the response.\nThe workflow execution ID can be used to get events and download files.",
+				"parameters": [
+					{
+						"schema": {
+							"type": "string",
+							"description": "The organization name"
+						},
+						"required": true,
+						"description": "The organization name",
+						"name": "org",
+						"in": "path"
+					},
+					{
+						"schema": {
+							"type": "string",
+							"description": "The workflow name"
+						},
+						"required": true,
+						"description": "The workflow name",
+						"name": "workflow",
+						"in": "path"
+					}
+				],
+				"requestBody": {
+					"content": {
+						"multipart/form-data": {
+							"schema": {
+								"type": "object",
+								"additionalProperties": {
+									"anyOf": [
+										{
+											"type": "string"
+										},
+										{
+											"type": "string",
+											"format": "binary"
+										}
+									]
+								}
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "Start a workflow",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"runId": {
+											"type": "string",
+											"description": "The id of the workflow execution"
+										},
+										"version": {
+											"type": "string",
+											"description": "The version of the workflow that was used (e.g. v00001)"
+										}
+									},
+									"required": ["runId", "version"]
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "Bad request",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"error": {
+											"type": "string"
+										}
+									},
+									"required": ["error"]
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/runs/{org}/{workflow}/{version}/{runId}/files": {
+			"get": {
+				"operationId": "downloadFile",
+				"description": "Download a file from a workflow run.\n\nAny file produced by the workflow is available for download at this endpoint.",
+				"parameters": [
+					{
+						"schema": {
+							"type": "string",
+							"description": "The organization name"
+						},
+						"required": true,
+						"description": "The organization name",
+						"name": "org",
+						"in": "path"
+					},
+					{
+						"schema": {
+							"type": "string",
+							"description": "The workflow name"
+						},
+						"required": true,
+						"description": "The workflow name",
+						"name": "workflow",
+						"in": "path"
+					},
+					{
+						"schema": {
+							"type": "string",
+							"description": "The workflow version (e.g. v00001)"
+						},
+						"required": true,
+						"description": "The workflow version (e.g. v00001)",
+						"name": "version",
+						"in": "path"
+					},
+					{
+						"schema": {
+							"type": "string",
+							"description": "The execution ID"
+						},
+						"required": true,
+						"description": "The execution ID",
+						"name": "runId",
+						"in": "path"
+					},
+					{
+						"schema": {
+							"type": "string",
+							"description": "The file name"
+						},
+						"required": false,
+						"description": "The file name",
+						"name": "fileName",
+						"in": "query"
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "Download file from workflow run (content type varies based on file)",
+						"content": {
+							"*/*": {
+								"schema": {
+									"description": "File content (text or binary depending on file type)"
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "File not found",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"error": {
+											"type": "string"
+										}
+									},
+									"required": ["error"]
+								}
+							}
+						}
+					}
+				}
+			},
+			"put": {
+				"operationId": "writeFile",
+				"description": "Write a file to a workflow run.\n\nThis endpoint allows writing or updating a file in a workflow run.\nUsed for HITL (Human-in-the-Loop) tasks where users can modify files\nbefore the workflow continues.",
+				"parameters": [
+					{
+						"schema": {
+							"type": "string",
+							"description": "The organization name"
+						},
+						"required": true,
+						"description": "The organization name",
+						"name": "org",
+						"in": "path"
+					},
+					{
+						"schema": {
+							"type": "string",
+							"description": "The workflow name"
+						},
+						"required": true,
+						"description": "The workflow name",
+						"name": "workflow",
+						"in": "path"
+					},
+					{
+						"schema": {
+							"type": "string",
+							"description": "The workflow version (e.g. v00001)"
+						},
+						"required": true,
+						"description": "The workflow version (e.g. v00001)",
+						"name": "version",
+						"in": "path"
+					},
+					{
+						"schema": {
+							"type": "string",
+							"description": "The execution ID"
+						},
+						"required": true,
+						"description": "The execution ID",
+						"name": "runId",
+						"in": "path"
+					},
+					{
+						"schema": {
+							"type": "string",
+							"description": "The file name to write"
+						},
+						"required": true,
+						"description": "The file name to write",
+						"name": "fileName",
+						"in": "query"
+					}
+				],
+				"requestBody": {
+					"content": {
+						"application/json": {
+							"schema": {
+								"description": "The file content as JSON"
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "File written successfully",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"success": {
+											"type": "boolean",
+											"description": "Whether the file was written successfully"
+										}
+									},
+									"required": ["success"]
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "Bad request",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"error": {
+											"type": "string"
+										}
+									},
+									"required": ["error"]
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/events/{runId}": {
+			"post": {
+				"operationId": "dispatchEvent",
+				"description": "Dispatch a task event.\n\nThis endpoint is used by distributed workers to dispatch events\nabout workflow task execution. It is *not* meant to be called by\nthe user.",
+				"parameters": [
+					{
+						"schema": {
+							"type": "string",
+							"description": "The run ID"
+						},
+						"required": true,
+						"description": "The run ID",
+						"name": "runId",
+						"in": "path"
+					}
+				],
+				"requestBody": {
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"type": {
+										"type": "string",
+										"enum": ["started", "completed", "failed"]
+									},
+									"step": {
+										"type": "string"
+									},
+									"taskId": {
+										"type": "string"
+									},
+									"timestamp": {
+										"type": "string"
+									},
+									"error": {
+										"type": "string"
+									}
+								},
+								"required": ["type", "step", "taskId", "timestamp"]
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "Event dispatched",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"success": {
+											"type": "boolean",
+											"description": "Whether the event was dispatched"
+										}
+									},
+									"required": ["success"]
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "Run not found",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"error": {
+											"type": "string"
+										}
+									},
+									"required": ["error"]
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/runs/{runId}/hitl/{taskId}/resume": {
+			"post": {
+				"operationId": "resumeHitl",
+				"description": "Resume a HITL (Human-in-the-Loop) task.\n\nThis endpoint is called after a user has reviewed and approved\na HITL task in the webapp. It signals the workflow engine to\ncontinue execution.",
+				"parameters": [
+					{
+						"schema": {
+							"type": "string",
+							"description": "The run ID"
+						},
+						"required": true,
+						"description": "The run ID",
+						"name": "runId",
+						"in": "path"
+					},
+					{
+						"schema": {
+							"type": "string",
+							"description": "The task ID"
+						},
+						"required": true,
+						"description": "The task ID",
+						"name": "taskId",
+						"in": "path"
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "HITL task resumed",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"success": {
+											"type": "boolean",
+											"description": "Whether the HITL task was resumed"
+										}
+									},
+									"required": ["success"]
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/debug/webhook": {
+			"post": {
+				"operationId": "debugWebhook",
+				"description": "Debug webhook endpoint for testing HITL notifications.\n\nThis endpoint prints the webhook payload to the console with a colorful banner.\nUse this for local development and debugging of HITL webhooks.",
+				"requestBody": {
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"from": {
+										"type": "string",
+										"format": "email"
+									},
+									"to": {
+										"type": "string",
+										"format": "email"
+									},
+									"subject": {
+										"type": "string"
+									},
+									"textBody": {
+										"type": "string"
+									},
+									"htmlBody": {
+										"type": "string"
+									}
+								},
+								"required": ["from", "to", "subject", "textBody", "htmlBody"]
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "Webhook received",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"received": {
+											"type": "boolean"
+										}
+									},
+									"required": ["received"]
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/email/render": {
+			"post": {
+				"operationId": "renderEmail",
+				"description": "Renders markdown content to HTML and plain text for email delivery.",
+				"requestBody": {
+					"content": {
+						"application/x-www-form-urlencoded": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"markdownBody": {
+										"type": "string",
+										"description": "The markdown content to render"
+									},
+									"preview": {
+										"type": "string",
+										"description": "Preview text shown in email clients"
+									}
+								},
+								"required": ["markdownBody", "preview"]
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "Rendered email content",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"textBody": {
+											"type": "string",
+											"description": "Plain text version of the email"
+										},
+										"htmlBody": {
+											"type": "string",
+											"description": "HTML version of the email"
+										}
+									},
+									"required": ["textBody", "htmlBody"]
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	},
+	"webhooks": {}
+}

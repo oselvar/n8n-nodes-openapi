@@ -19,8 +19,8 @@ export function buildRequestOptions(
 	bodyParams: Record<string, unknown>,
 	credentials?: Credentials,
 ): IHttpRequestOptions {
-	const url = buildUrl(baseUrl, operation.path, params, operation.parameters)
-	const qs = buildQueryString(operation.parameters, params, credentials)
+	const { url, usedParams } = buildUrl(baseUrl, operation.path, params)
+	const qs = buildQueryString(params, usedParams, credentials)
 	const headers = buildHeaders(credentials)
 
 	const options: IHttpRequestOptions = {
@@ -33,7 +33,7 @@ export function buildRequestOptions(
 		options.qs = qs
 	}
 
-	if (operation.requestBodySchema && Object.keys(bodyParams).length > 0) {
+	if (Object.keys(bodyParams).length > 0) {
 		options.body = bodyParams
 		options.json = true
 	}
@@ -45,35 +45,34 @@ function buildUrl(
 	baseUrl: string,
 	path: string,
 	params: Record<string, unknown>,
-	parameters: readonly ParsedOperation['parameters'][number][],
-): string {
+): { url: string; usedParams: Set<string> } {
 	let url = `${baseUrl}${path}`
+	const usedParams = new Set<string>()
 
-	for (const param of parameters) {
-		if (param.in === 'path') {
-			const value = params[param.name]
-			if (value !== undefined) {
-				url = url.replace(`{${param.name}}`, encodeURIComponent(String(value)))
-			}
+	const pathParamRegex = /\{([^}]+)\}/g
+	let match
+	while ((match = pathParamRegex.exec(path)) !== null) {
+		const paramName = match[1]
+		const value = params[paramName]
+		if (value !== undefined) {
+			url = url.replace(`{${paramName}}`, encodeURIComponent(String(value)))
+			usedParams.add(paramName)
 		}
 	}
 
-	return url
+	return { url, usedParams }
 }
 
 function buildQueryString(
-	parameters: readonly ParsedOperation['parameters'][number][],
 	params: Record<string, unknown>,
+	usedParams: Set<string>,
 	credentials?: Credentials,
 ): IDataObject {
 	const qs: IDataObject = {}
 
-	for (const param of parameters) {
-		if (param.in === 'query') {
-			const value = params[param.name]
-			if (value !== undefined && value !== '') {
-				qs[param.name] = value
-			}
+	for (const [name, value] of Object.entries(params)) {
+		if (!usedParams.has(name) && value !== undefined && value !== '') {
+			qs[name] = value
 		}
 	}
 
