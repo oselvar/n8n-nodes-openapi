@@ -1,15 +1,10 @@
-import type {
-	ICredentialTestRequest,
-	ICredentialType,
-	INodeProperties,
-	Icon,
-} from 'n8n-workflow'
+import type { ICredentialTestRequest, ICredentialType, INodeProperties, Icon } from 'n8n-workflow';
 
 export class OpenApiCredentialsApi implements ICredentialType {
-	name = 'openApiCredentialsApi'
-	displayName = 'OpenAPI Credentials API'
-	documentationUrl = 'https://github.com/oselvar/n8n-nodes-openapi'
-	icon: Icon = 'file:../nodes/OpenApi/openapi.svg'
+	name = 'openApiCredentialsApi';
+	displayName = 'OpenAPI Credentials API';
+	documentationUrl = 'https://github.com/oselvar/n8n-nodes-openapi';
+	icon: Icon = 'file:../nodes/OpenApi/openapi.svg';
 
 	properties: INodeProperties[] = [
 		{
@@ -27,8 +22,7 @@ export class OpenApiCredentialsApi implements ICredentialType {
 			type: 'string',
 			default: '',
 			placeholder: 'https://api.example.com/v1',
-			description:
-				'Override the base URL from the spec. Leave empty to use the URL from the spec.',
+			description: 'Override the base URL from the spec. Leave empty to use the URL from the spec.',
 		},
 		{
 			displayName: 'Authentication Type',
@@ -124,7 +118,7 @@ export class OpenApiCredentialsApi implements ICredentialType {
 			},
 			description: 'The password for basic authentication',
 		},
-	]
+	];
 
 	test: ICredentialTestRequest = {
 		request: {
@@ -132,5 +126,5 @@ export class OpenApiCredentialsApi implements ICredentialType {
 			method: 'GET',
 			url: '',
 		},
-	}
+	};
 }

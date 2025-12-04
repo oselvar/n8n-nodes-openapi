@@ -24,7 +24,8 @@
 		"release": "n8n-node release",
 		"prepublishOnly": "n8n-node prerelease",
 		"test": "vitest run",
-		"test:watch": "vitest"
+		"test:watch": "vitest",
+		"format": "prettier --write ."
 	},
 	"files": [
 		"dist"

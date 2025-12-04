@@ -1,6 +1,6 @@
-import { describe, it, expect } from 'vitest'
-import { schemaToNodeProperties } from '../nodes/OpenApi/lib/schemaToNodeProperties'
-import type { OpenApiSchema } from '../nodes/OpenApi/lib/types'
+import { describe, it, expect } from 'vitest';
+import { schemaToNodeProperties } from '../nodes/OpenApi/lib/schemaToNodeProperties';
+import type { OpenApiSchema } from '../nodes/OpenApi/lib/types';
 
 describe('schemaToNodeProperties', () => {
 	it('converts string property', () => {
@@ -12,11 +12,11 @@ describe('schemaToNodeProperties', () => {
 					description: 'The name',
 				},
 			},
-		}
+		};
 
-		const properties = schemaToNodeProperties(schema, 'createPet')
+		const properties = schemaToNodeProperties(schema, 'createPet');
 
-		expect(properties).toHaveLength(1)
+		expect(properties).toHaveLength(1);
 		expect(properties[0]).toMatchObject({
 			displayName: 'Name',
 			name: 'name',
@@ -24,8 +24,8 @@ describe('schemaToNodeProperties', () => {
 			default: '',
 			required: false,
 			description: 'The name',
-		})
-	})
+		});
+	});
 
 	it('converts required string property', () => {
 		const schema: OpenApiSchema = {
@@ -37,12 +37,12 @@ describe('schemaToNodeProperties', () => {
 					description: 'The name',
 				},
 			},
-		}
+		};
 
-		const properties = schemaToNodeProperties(schema, 'createPet')
+		const properties = schemaToNodeProperties(schema, 'createPet');
 
-		expect(properties[0].required).toBe(true)
-	})
+		expect(properties[0].required).toBe(true);
+	});
 
 	it('converts integer property to number type', () => {
 		const schema: OpenApiSchema = {
@@ -53,9 +53,9 @@ describe('schemaToNodeProperties', () => {
 					description: 'Age in years',
 				},
 			},
-		}
+		};
 
-		const properties = schemaToNodeProperties(schema, 'createPet')
+		const properties = schemaToNodeProperties(schema, 'createPet');
 
 		expect(properties[0]).toMatchObject({
 			displayName: 'Age',
@@ -63,8 +63,8 @@ describe('schemaToNodeProperties', () => {
 			type: 'number',
 			default: 0,
 			description: 'Age in years',
-		})
-	})
+		});
+	});
 
 	it('converts number property', () => {
 		const schema: OpenApiSchema = {
@@ -74,16 +74,16 @@ describe('schemaToNodeProperties', () => {
 					type: 'number',
 				},
 			},
-		}
+		};
 
-		const properties = schemaToNodeProperties(schema, 'setPrice')
+		const properties = schemaToNodeProperties(schema, 'setPrice');
 
 		expect(properties[0]).toMatchObject({
 			name: 'price',
 			type: 'number',
 			default: 0,
-		})
-	})
+		});
+	});
 
 	it('converts boolean property', () => {
 		const schema: OpenApiSchema = {
@@ -94,9 +94,9 @@ describe('schemaToNodeProperties', () => {
 					description: 'Whether the pet is vaccinated',
 				},
 			},
-		}
+		};
 
-		const properties = schemaToNodeProperties(schema, 'createPet')
+		const properties = schemaToNodeProperties(schema, 'createPet');
 
 		expect(properties[0]).toMatchObject({
 			displayName: 'Vaccinated',
@@ -104,8 +104,8 @@ describe('schemaToNodeProperties', () => {
 			type: 'boolean',
 			default: false,
 			description: 'Whether the pet is vaccinated',
-		})
-	})
+		});
+	});
 
 	it('converts enum to options type', () => {
 		const schema: OpenApiSchema = {
@@ -116,21 +116,21 @@ describe('schemaToNodeProperties', () => {
 					enum: ['available', 'pending', 'sold'],
 				},
 			},
-		}
+		};
 
-		const properties = schemaToNodeProperties(schema, 'updateStatus')
+		const properties = schemaToNodeProperties(schema, 'updateStatus');
 
 		expect(properties[0]).toMatchObject({
 			displayName: 'Status',
 			name: 'status',
 			type: 'options',
-		})
+		});
 		expect(properties[0].options).toEqual([
 			{ name: 'Available', value: 'available' },
 			{ name: 'Pending', value: 'pending' },
 			{ name: 'Sold', value: 'sold' },
-		])
-	})
+		]);
+	});
 
 	it('includes displayOptions for operation', () => {
 		const schema: OpenApiSchema = {
@@ -140,16 +140,16 @@ describe('schemaToNodeProperties', () => {
 					type: 'string',
 				},
 			},
-		}
+		};
 
-		const properties = schemaToNodeProperties(schema, 'createPet')
+		const properties = schemaToNodeProperties(schema, 'createPet');
 
 		expect(properties[0].displayOptions).toEqual({
 			show: {
 				operation: ['createPet'],
 			},
-		})
-	})
+		});
+	});
 
 	it('includes routing for body property', () => {
 		const schema: OpenApiSchema = {
@@ -159,17 +159,17 @@ describe('schemaToNodeProperties', () => {
 					type: 'string',
 				},
 			},
-		}
+		};
 
-		const properties = schemaToNodeProperties(schema, 'createPet')
+		const properties = schemaToNodeProperties(schema, 'createPet');
 
 		expect(properties[0].routing).toEqual({
 			send: {
 				type: 'body',
 				property: 'name',
 			},
-		})
-	})
+		});
+	});
 
 	it('handles schema with default values', () => {
 		const schema: OpenApiSchema = {
@@ -184,16 +184,16 @@ describe('schemaToNodeProperties', () => {
 					default: true,
 				},
 			},
-		}
+		};
 
-		const properties = schemaToNodeProperties(schema, 'list')
+		const properties = schemaToNodeProperties(schema, 'list');
 
-		const limitProp = properties.find((p) => p.name === 'limit')
-		expect(limitProp?.default).toBe(10)
+		const limitProp = properties.find((p) => p.name === 'limit');
+		expect(limitProp?.default).toBe(10);
 
-		const activeProp = properties.find((p) => p.name === 'active')
-		expect(activeProp?.default).toBe(true)
-	})
+		const activeProp = properties.find((p) => p.name === 'active');
+		expect(activeProp?.default).toBe(true);
+	});
 
 	it('handles multiple properties', () => {
 		const schema: OpenApiSchema = {
@@ -209,39 +209,39 @@ describe('schemaToNodeProperties', () => {
 					description: 'Preview text shown in email clients',
 				},
 			},
-		}
+		};
 
-		const properties = schemaToNodeProperties(schema, 'renderEmail')
+		const properties = schemaToNodeProperties(schema, 'renderEmail');
 
-		expect(properties).toHaveLength(2)
+		expect(properties).toHaveLength(2);
 		expect(properties[0]).toMatchObject({
 			displayName: 'Markdown Body',
 			name: 'markdownBody',
 			type: 'string',
 			required: true,
 			description: 'The markdown content to render',
-		})
+		});
 		expect(properties[1]).toMatchObject({
 			displayName: 'Preview',
 			name: 'preview',
 			type: 'string',
 			required: true,
 			description: 'Preview text shown in email clients',
-		})
-	})
+		});
+	});
 
 	it('returns empty array for undefined schema', () => {
-		const properties = schemaToNodeProperties(undefined, 'op')
-		expect(properties).toEqual([])
-	})
+		const properties = schemaToNodeProperties(undefined, 'op');
+		expect(properties).toEqual([]);
+	});
 
 	it('returns empty array for non-object schema', () => {
 		const schema: OpenApiSchema = {
 			type: 'string',
-		}
-		const properties = schemaToNodeProperties(schema, 'op')
-		expect(properties).toEqual([])
-	})
+		};
+		const properties = schemaToNodeProperties(schema, 'op');
+		expect(properties).toEqual([]);
+	});
 
 	it('converts camelCase to Title Case for displayName', () => {
 		const schema: OpenApiSchema = {
@@ -251,12 +251,12 @@ describe('schemaToNodeProperties', () => {
 				lastName: { type: 'string' },
 				emailAddress: { type: 'string' },
 			},
-		}
+		};
 
-		const properties = schemaToNodeProperties(schema, 'create')
+		const properties = schemaToNodeProperties(schema, 'create');
 
-		expect(properties[0].displayName).toBe('First Name')
-		expect(properties[1].displayName).toBe('Last Name')
-		expect(properties[2].displayName).toBe('Email Address')
-	})
-})
+		expect(properties[0].displayName).toBe('First Name');
+		expect(properties[1].displayName).toBe('Last Name');
+		expect(properties[2].displayName).toBe('Email Address');
+	});
+});
